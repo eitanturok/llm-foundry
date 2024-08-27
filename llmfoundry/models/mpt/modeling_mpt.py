@@ -165,6 +165,24 @@ def gen_rotary_embedding(
             return LlamaRotaryEmbeddingFoundry(config=partial_llama_config)
         elif rope_hf_config['type'] in {'llama3', 'linear', 'dynamic'}:
             return LlamaRotaryEmbedding(config=partial_llama_config)
+        else:
+            raise ValueError(f"`rope_hf_config['type']` only supports types `no_scaling`, `llama3`, `linear`, or `dynamic` but rope_hf_config['type']={rope_hf_config['type']}.")
+    elif rope_impl == 'liger':
+        from liger_kernel.ops.rope import LigerRopeFunction
+        llama_rope_config = {**rope_hf_config}
+        llama_rope_config['rope_type'] = llama_rope_config.pop('type')
+        if llama_rope_config['rope_type'] == 'no_scaling':
+            llama_rope_config['rope_type'] = 'default'
+        partial_llama_config = PartialLlamaConfig(
+            rope_scaling=llama_rope_config,
+            rope_theta=rope_theta,
+            max_position_embeddings=max_seq_len,
+            hidden_size=d_model,
+            num_attention_heads=n_heads,
+        )
+        return LigerRopeFunction(**partial_llama_config)
+
+
     raise ValueError('rope_impl needs to be either dail or hf')
 
 
