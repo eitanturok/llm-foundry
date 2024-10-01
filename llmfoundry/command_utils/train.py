@@ -20,7 +20,7 @@ from composer.profiler import (
     cyclic_schedule,
 )
 from composer.utils import dist, get_device, reproducibility
-from icecream import install, ic
+from icecream import ic, install
 from omegaconf import DictConfig
 from omegaconf import OmegaConf as om
 
@@ -67,6 +67,7 @@ log = logging.getLogger(__name__)
 
 ic.configureOutput(includeContext=True)
 install()
+
 
 def validate_config(train_config: TrainConfig):
     """Validates compatible model and dataloader selection."""

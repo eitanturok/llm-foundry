@@ -21,7 +21,8 @@ model:
   max_seq_len: ${variables.max_seq_len}
   vocab_size: 50368
   attn_config:
-    attn_impl: flash
+    attn_impl: flash # torch
+    fused_qkv: false
 
 # Tokenizer
 tokenizer:
@@ -39,6 +40,7 @@ train_loader:
     shuffle: true
     max_seq_len: ${variables.max_seq_len}
     shuffle_seed: ${variables.global_seed}
+    replication: 2
   drop_last: true
   num_workers: 8
 
@@ -74,7 +76,7 @@ algorithms:
     clipping_type: norm
     clipping_threshold: 1.0
 
-max_duration: 4800ba  # ~ 2.5B tokens
+max_duration: 100ba  # ~ 2.5B tokens
 eval_interval: 500ba
 eval_first: false
 eval_subset_num_batches: -1
@@ -95,6 +97,11 @@ fsdp_config:
   activation_checkpointing_reentrant: false
   activation_cpu_offload: false
   limit_all_gathers: true
+
+# TP
+tp_config:
+  strategy: megatron_1 # ffn
+  tensor_parallel_degree: 2
 
 # Logging
 progress_bar: false

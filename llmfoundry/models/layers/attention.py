@@ -648,7 +648,8 @@ class GroupedQueryAttention(nn.Module):
         ic(context.shape)
         ic(self.out_proj.weight.shape)
         ic(self.out_proj(context).shape)
-        if attn_weights is not None: ic(attn_weights.shape)
+        if attn_weights is not None:
+            ic(attn_weights.shape)
         ic(past_key_value)
         return self.out_proj(context), attn_weights, past_key_value
 
@@ -671,7 +672,10 @@ class GroupedQueryAttention(nn.Module):
             key (torch.Tensor): The key tensor.
             value (torch.Tensor): The value tensor.
         """
-        ic(x.shape, self.Wq.weight.shape, self.Wk.weight.shape, self.Wv.weight.shape)
+        # ic(
+        #     x.shape, self.Wq.weight.shape, self.Wk.weight.shape,
+        #     self.Wv.weight.shape
+        # )
         if self.reuse_kv_layer_idx is not None:
             if prev_layer_key_value is None:
                 raise ValueError(
