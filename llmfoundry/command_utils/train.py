@@ -524,6 +524,7 @@ def train(cfg: DictConfig) -> Trainer:
         strategy = tp_config.pop('strategy', None)
         assert isinstance(strategy, str), '`strategy` must be in `tp_config`.'
         tp_config['layer_plan'] = build_tp_strategies(strategy, model)
+        ic(tp_config)
 
     # Parallelism config
     parallelism_config = {'fsdp': fsdp_config, 'tp': tp_config}

@@ -612,6 +612,8 @@ class GroupedQueryAttention(nn.Module):
             **extra_kwargs,
         )
 
+        ic(self.Wq.weight.shape, self.Wk.weight.shape, self.Wv.weight.shape, self.out_proj.weight.shape)
+
         if rotary_emb_w_meta_info is not None:
             query, key, value = self._apply_rotary_embeddings(
                 rotary_emb_w_meta_info,
