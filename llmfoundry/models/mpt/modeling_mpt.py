@@ -1452,6 +1452,7 @@ class ComposerMPTCausalLM(HuggingFaceModel):
                     'Requirements for MegaBlocks not installed; see install instructions in `README.md`.',
                 )
             clear_load_balancing_loss()
+        ic(batch['input_ids'].shape, batch['input_ids'][0, :10])
         return self.model(
             input_ids=batch.get('input_ids', None),
             attention_mask=batch.get('attention_mask', None),

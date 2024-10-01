@@ -21,7 +21,8 @@ model:
   max_seq_len: ${variables.max_seq_len}
   vocab_size: 50368
   attn_config:
-    attn_impl: flash
+    attn_impl: torch
+    fused_qkv: false
 
 # Tokenizer
 tokenizer:
@@ -35,7 +36,7 @@ train_loader:
   dataset:
     local: ${variables.data_local}
     remote: ${variables.data_remote}
-    split: train
+    split: train_small
     shuffle: true
     max_seq_len: ${variables.max_seq_len}
     shuffle_seed: ${variables.global_seed}
@@ -47,7 +48,7 @@ eval_loader:
   dataset:
     local: ${variables.data_local}
     remote: ${variables.data_remote}
-    split: val
+    split: val_small
     shuffle: false
     max_seq_len: ${variables.max_seq_len}
     shuffle_seed: ${variables.global_seed}

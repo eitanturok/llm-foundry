@@ -323,6 +323,8 @@ def build_text_dataloader(
         },
     )
 
+    ic(dataset_cfg['replication'])
+
     streams = build_streams(
         streams=dataset_cfg.pop('streams')
         if 'streams' in dataset_cfg else None,

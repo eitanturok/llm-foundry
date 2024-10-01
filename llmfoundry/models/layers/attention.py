@@ -120,6 +120,7 @@ def scaled_multihead_dot_product_attention(
     q = rearrange(query, 'b s (h d) -> b h s d', h=n_heads)
     k = rearrange(key, 'b s (h d) -> b h d s', h=kv_n_heads)
     v = rearrange(value, 'b s (h d) -> b h s d', h=kv_n_heads)
+    ic(q.shape, k.shape, v.shape)
 
     if past_key_value is not None:
         # attn_impl: flash attn uses kernels which expect input shape [b, s, h, d_head].
@@ -625,6 +626,8 @@ class GroupedQueryAttention(nn.Module):
             flash_attn_padding_info,
         )
 
+        ic(query.shape, key.shape, value.shape)
+        ic(self.n_heads)
         context, attn_weights, past_key_value = self.attn_fn(
             query,
             key,
@@ -642,7 +645,11 @@ class GroupedQueryAttention(nn.Module):
             sliding_window_size=self.sliding_window_size,
             **extra_attn_kwargs,
         )
-
+        ic(context.shape)
+        ic(self.out_proj.weight.shape)
+        ic(self.out_proj(context).shape)
+        if attn_weights is not None: ic(attn_weights.shape)
+        ic(past_key_value)
         return self.out_proj(context), attn_weights, past_key_value
 
     def get_qkv(
@@ -664,6 +671,7 @@ class GroupedQueryAttention(nn.Module):
             key (torch.Tensor): The key tensor.
             value (torch.Tensor): The value tensor.
         """
+        ic(x.shape, self.Wq.weight.shape, self.Wk.weight.shape, self.Wv.weight.shape)
         if self.reuse_kv_layer_idx is not None:
             if prev_layer_key_value is None:
                 raise ValueError(

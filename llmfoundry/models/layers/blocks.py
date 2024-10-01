@@ -187,7 +187,9 @@ class MPTBlock(nn.Module):
                 **extra_kwargs,
             )
         else:
+            ic(x.shape)
             a = self.norm_1(x)
+            ic(a.shape)
             b, attn_weights, past_key_value = self.attn(
                 a,
                 past_key_value=past_key_value,
@@ -200,14 +202,23 @@ class MPTBlock(nn.Module):
                 flash_attn_padding_info=flash_attn_padding_info,
                 **extra_kwargs,
             )
+            ic(b.shape)
+            if attn_weights is not None: ic(attn_weights.shape)
             x = x + self.resid_attn_dropout(b)
+            ic(x.shape)
             m = x
+            ic(m.shape)
             if self.norm_2 is not None:
                 m = self.norm_2(x)
+            ic(m.shape)
 
         n = self.apply_ffn(attention_mask, m)
         # In the following line we move the `x` tensor to the same devices as the output of ffn layer. This operation should be a no-op during training.
         # This is done to fix pipeline parallel generation using hf.generate. Please see this comment for details: https://github.com/mosaicml/llm-foundry/pull/1332#issue-2386827204
+        if x is not None: ic(x.shape)
+        if attention_mask is not None: ic(attention_mask.shape)
+        if m is not None: ic(m.shape)
+        if n is not None: ic(n.shape)
         x = x.to(device=n.device,
                 ) + self.resid_ffn_dropout(n).to(device=n.device,)
         return x, attn_weights, past_key_value
