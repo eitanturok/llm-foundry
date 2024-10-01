@@ -154,6 +154,7 @@ class MPTConfig(PretrainedConfig):
         """
         self.d_model = d_model
         self.n_heads = n_heads
+        ic(self.n_heads)
         self.n_layers = n_layers
         self.expansion_ratio = expansion_ratio
         if max_seq_len != int(max_seq_len):

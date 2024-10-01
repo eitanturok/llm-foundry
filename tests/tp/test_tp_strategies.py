@@ -1,10 +1,14 @@
 # Copyright 2024 MosaicML LLM Foundry authors
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
+from composer.callbacks import MemoryMonitor
+from composer.loggers import InMemoryLogger
 from omegaconf import OmegaConf as om
 from torch.distributed._tensor import Replicate, Shard
 from torch.distributed.tensor.parallel import (
@@ -131,3 +135,40 @@ def test_no_tp_with_moes():
         match='Tensor Parallelism is not currently supported for MoE models.',
     ):
         process_init_device(model_cfg, fsdp_cfg, tp_cfg)
+
+
+@pytest.mark.world_size(4)
+@pytest.mark.gpu
+@pytest.mark.parametrize('tp_strategy', ['megatron_1'])
+def test_megatron(world_size: int, tp_strategy: str):
+    data_dir = Path('/my-data-dir/')
+    tp_degree: int = 2
+
+    try:
+        if os.path.isdir(data_dir):
+            shutil.rmtree(data_dir)
+        # Make `train_cfg` with a tensor parallelism strategy
+        os.makedirs(data_dir, exist_ok=True)
+        dataset_name = create_c4_dataset_xxsmall(data_dir)
+        train_cfg = gpt_tiny_cfg(dataset_name, 'gpu')
+        train_cfg.variables.run_name = 'tp-test'
+        train_cfg.tp_config = {'strategy': tp_strategy, 'tensor_parallel_degree': tp_degree}
+        train_cfg.train_loader.dataset.replication = tp_degree
+        train_cfg.eval_loader.dataset.replication = tp_degree
+        train_cfg.model.attn_cfg.fused_qkv = False
+        train_cfg.callbacks = [MemoryMonitor()]
+        train_cfg.loggers = [InMemoryLogger()]
+
+        # Train
+        trainer = train(train_cfg)
+        ic(trainer)
+    except Exception as e:
+        raise e
+    finally:
+        pass
+        # always remove data directory
+        # if os.path.isdir(data_dir):
+        #     shutil.rmtree(data_dir)
+
+if __name__ == '__main__':
+    test_megatron(4, 'megatron_1')

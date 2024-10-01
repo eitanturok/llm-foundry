@@ -224,7 +224,7 @@ def build_save_planner(name: str, **kwargs: Any) -> SavePlanner:
 
 def build_composer_model(
     name: str,
-    cfg: dict[str, Any],
+    model_cfg: dict[str, Any],
     tokenizer: PreTrainedTokenizerBase,
     init_context: Optional[ContextManager] = None,
     master_weights_dtype: Optional[str] = None,
@@ -251,7 +251,7 @@ def build_composer_model(
             pre_validation_function=ComposerModel,
             post_validation_function=None,
             kwargs={
-                **cfg,
+                **model_cfg,
                 'tokenizer': tokenizer,
             },
         )

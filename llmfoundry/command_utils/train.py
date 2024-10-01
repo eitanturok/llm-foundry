@@ -352,6 +352,12 @@ def train(cfg: DictConfig) -> Trainer:
         fsdp_config = None
         tp_config = None
 
+    # adjust number of heads
+    ic(model_config['n_heads'])
+    if tp_config is not None:
+        model_config['n_heads'] = model_config['n_heads'] // tp_config['tensor_parallel_degree']
+    ic(model_config['n_heads'])
+
     # Initialize context
     init_context = process_init_device(model_config, fsdp_config, tp_config)
     logged_cfg.update({'fsdp_config': fsdp_config}, merge=True)
@@ -514,8 +520,9 @@ def train(cfg: DictConfig) -> Trainer:
         tokenizer=tokenizer,
         init_context=init_context,
         master_weights_dtype=model_config.pop('master_weights_dtype', None),
-        cfg=model_config,
+        model_cfg=model_config,
     )
+    ic(model)
 
     _log_num_params(model, logged_cfg)
 

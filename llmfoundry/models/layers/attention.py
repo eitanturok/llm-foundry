@@ -472,6 +472,7 @@ class GroupedQueryAttention(nn.Module):
 
         self.d_model = d_model
         self.n_heads = n_heads
+        ic(self.n_heads)
         self.kv_n_heads = kv_n_heads
         self.sliding_window_size = sliding_window_size
         self.reuse_kv_layer_idx = reuse_kv_layer_idx
@@ -559,6 +560,7 @@ class GroupedQueryAttention(nn.Module):
             self.Wq._fused = (0, q_fuse_splits)
             self.Wk._fused = (0, kv_fuse_splits)
             self.Wv._fused = (0, kv_fuse_splits)
+            ic(self.Wq._fused)
 
         if self.qk_ln or self.qk_gn:
             norm_size = self.head_dim if qk_gn else d_model
