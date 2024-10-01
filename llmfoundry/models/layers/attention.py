@@ -120,7 +120,6 @@ def scaled_multihead_dot_product_attention(
     q = rearrange(query, 'b s (h d) -> b h s d', h=n_heads)
     k = rearrange(key, 'b s (h d) -> b h d s', h=kv_n_heads)
     v = rearrange(value, 'b s (h d) -> b h s d', h=kv_n_heads)
-    ic(q.shape, k.shape, v.shape)
 
     if past_key_value is not None:
         # attn_impl: flash attn uses kernels which expect input shape [b, s, h, d_head].
@@ -508,6 +507,8 @@ class GroupedQueryAttention(nn.Module):
             self.softmax_scale = 1 / math.sqrt(self.d_model / self.n_heads)
         self.attn_dropout_p = attn_pdrop
 
+        ic(fc_type_name, self.d_model, self.d_model, fc_type)
+
         if self.reuse_kv_layer_idx is not None:
             self.Wq = build_fc(
                 name=fc_type_name,
@@ -613,6 +614,8 @@ class GroupedQueryAttention(nn.Module):
         )
 
         ic(self.Wq.weight.shape, self.Wk.weight.shape, self.Wv.weight.shape, self.out_proj.weight.shape)
+        ic(x.shape, query.shape, key.shape, value.shape)
+        ic(self.n_heads)
 
         if rotary_emb_w_meta_info is not None:
             query, key, value = self._apply_rotary_embeddings(
@@ -628,8 +631,6 @@ class GroupedQueryAttention(nn.Module):
             flash_attn_padding_info,
         )
 
-        ic(query.shape, key.shape, value.shape)
-        ic(self.n_heads)
         context, attn_weights, past_key_value = self.attn_fn(
             query,
             key,
@@ -721,30 +722,40 @@ class GroupedQueryAttention(nn.Module):
                 dim=2,
             )
         else:
+            ic(self.Wq.weight.shape, self.Wk.weight.shape, self.Wv.weight.shape, self.out_proj.weight.shape, x.shape)
             query = self.Wq(x)
+            ic(query.shape)
             if key_value_states is not None:
                 key = self.Wk(key_value_states)
                 value = self.Wv(key_value_states)
             else:
                 key = self.Wk(x)
                 value = self.Wv(x)
+            ic(key.shape, value.shape)
 
             if self.clip_qkv:
                 query = query.clamp(min=-self.clip_qkv, max=self.clip_qkv)
                 key = key.clamp(min=-self.clip_qkv, max=self.clip_qkv)
                 value = value.clamp(min=-self.clip_qkv, max=self.clip_qkv)
 
+        ic(self.qk_ln, self.qk_gn)
         if self.qk_ln or self.qk_gn:
             # Applying layernorm to qk
             q_shape, k_shape = query.shape, key.shape
+            ic(q_shape, k_shape)
             if self.qk_gn:
                 b, s = query.shape[:2]
+                ic(query.shape, key.shape)
                 query = query.view(b, s, self.n_heads, -1)
                 key = key.view(b, s, self.kv_n_heads, -1)
+                ic(query.shape, key.shape)
             dtype = query.dtype
             query = self.q_ln(query).to(dtype).view(q_shape)
             key = self.k_ln(key).to(dtype).view(k_shape)
 
+
+        ic(self.Wq.weight.shape, self.Wk.weight.shape, self.Wv.weight.shape, self.out_proj.weight.shape, x.shape)
+        ic(query.shape, key.shape, value.shape)
         return query, key, value
 
     def _apply_rotary_embeddings(

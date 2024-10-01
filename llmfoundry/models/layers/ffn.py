@@ -181,6 +181,7 @@ class MPTMLP(nn.Module):
         self.down_proj._is_residual = True
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        ic(self.up_proj.weight.shape, x.shape, self.down_proj.weight.shape)
         return self.down_proj(self.act(self.up_proj(x)))
 
 
