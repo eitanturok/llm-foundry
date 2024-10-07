@@ -60,6 +60,8 @@ from llmfoundry.utils.exceptions import (
     TrainDataLoaderLocation,
 )
 from llmfoundry.utils.registry_utils import import_file
+from icecream import ic, install
+install()
 
 log = logging.getLogger(__name__)
 

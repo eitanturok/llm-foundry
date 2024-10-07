@@ -643,6 +643,7 @@ class GroupedQueryAttention(nn.Module):
             **extra_attn_kwargs,
         )
 
+        ic(context.shape, self.out_proj.weight.shape)
         return self.out_proj(context), attn_weights, past_key_value
 
     def get_qkv(

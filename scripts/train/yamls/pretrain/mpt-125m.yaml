@@ -35,6 +35,8 @@ train_loader:
   dataset:
     local: ${variables.data_local}
     remote: ${variables.data_remote}
+    # local: /tmp/dataset/c4
+    # remote: oci://mosaicml-internal-dataset-c4/preconcat-gpt_neox/
     split: train
     shuffle: true
     max_seq_len: ${variables.max_seq_len}
