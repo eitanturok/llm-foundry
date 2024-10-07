@@ -318,8 +318,7 @@ def train(cfg: DictConfig) -> Trainer:
 
     # Enable autoresume from model checkpoints if possible
     autoresume_default: bool = False
-    if logged_cfg.get('run_name', None) is not None \
-        and train_cfg.save_folder is not None \
+    if train_cfg.save_folder is not None \
         and not train_cfg.save_overwrite \
         and not train_cfg.save_weights_only:
         autoresume_default = True
@@ -331,7 +330,7 @@ def train(cfg: DictConfig) -> Trainer:
         )
 
     # Optional tp config
-    tp_config: Optional[dict[str, Any]] = train_cfg.tp_config
+    tp_config: Optional[Union[TPConfig, dict[str, Any]]] = train_cfg.tp_config
 
     # Warn if FSDP or TP is enabled but user only has 1 GPU
     if dist.get_world_size(
@@ -517,7 +516,7 @@ def train(cfg: DictConfig) -> Trainer:
 
     # TP config
     if tp_config is not None:
-        strategy = tp_config.pop('strategy', None)
+        strategy = tp_config.pop('strategy')
         layer_plan = build_tp_strategies(strategy, model)
         tp_config = TPConfig(**tp_config, layer_plan=layer_plan)
 

@@ -290,7 +290,6 @@ def apply_transforms_to_config(
     # ic(cfg)
     for transform in transform_functions:
         cfg = transform(cfg)
-    # ic(cfg)
     return cfg
 
 

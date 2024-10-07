@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from typing import Optional
 
 import pytest
+from composer import Trainer
 from composer.callbacks import MemoryMonitor
 from icecream import ic, install
 from omegaconf import DictConfig
@@ -109,36 +110,29 @@ def get_cfg(
     dataset_name: pathlib.Path,
     tp_strategy: Optional[str] = None,
     tp_degree: Optional[int] = None,
+    yaml_path: str = 'scripts/train/yamls/pretrain/testing.yaml',
 ):
     # Read cfg from `testing.yaml`
     from tests.fixtures.autouse import REPO_DIR
-    cfg_path: str = os.path.join(
-        REPO_DIR, 'scripts/train/yamls/pretrain/testing.yaml'
-    )
+    cfg_path: str = os.path.join(REPO_DIR, yaml_path)
     with open(cfg_path, 'r', encoding='utf-8') as f:
         train_cfg = om.load(f)
     assert isinstance(train_cfg, DictConfig)
 
-    # Set the dataset
+    # Set the name, dataset, loggers
+    train_cfg.variables.run_name = 'fsdp-test'
     train_cfg.variables.data_local = dataset_name
+    train_cfg.loggers = DictConfig({'inmemory': DictConfig({})})
 
-    # Set batch size
+    # Set batch size, duration
     train_cfg.global_train_batch_size = 16
     train_cfg.device_eval_batch_size = 2
     train_cfg.device_train_microbatch_size = 2
-
-    # Set duration
     train_cfg.max_duration = '1ep'
     train_cfg.eval_interval = '1ep'
 
-    # TP needs unfused qkv (and we unfuse for no TP for a fair comparison)
+    # TP needs unfused qkv (even without TP, we unfuse qkv for a fair comparison)
     train_cfg.model.attn_cfg = {'fused_qkv': False}
-
-    # loggers
-    train_cfg.loggers = DictConfig({'inmemory': DictConfig({})})
-
-    # default name
-    train_cfg.variables.run_name = 'fsdp-test'
 
     if tp_strategy and tp_degree:
         train_cfg.variables.run_name = 'tp-test'
@@ -147,65 +141,54 @@ def get_cfg(
             'tensor_parallel_degree': tp_degree,
         }
 
-        # when we replicate the data tp_degree times, each device must see tp_degree times more samples
-        # because the samples are replicated
-        # train_cfg.train_loader.dataset.replication = tp_degree
-        # train_cfg.eval_loader.dataset.replication = tp_degree
-        # train_cfg.global_train_batch_size *= tp_degree
-        # # # # train_cfg.device_train_microbatch_size *= tp_degree
-        # # # # train_cfg.device_eval_batch_size *= tp_degree
-
     return train_cfg
 
 
-
-def get_loss_array(trainer):
+def get_loss_array(trainer: Trainer):
     logger = trainer.logger.destinations[0]
-    loss_array = logger.get_timeseries(
-        'loss/train/total',
-    )['loss/train/total'],  # type: ignore
+    loss_array = logger.get_timeseries('loss/train/total')['loss/train/total'
+                                                          ]  # type: ignore
     return loss_array
-
-
-def create_c4_dataset(data_dir: pathlib.Path):
-    if data_dir.is_dir():
-        shutil.rmtree(data_dir)
-    data_dir.mkdir(parents=True, exist_ok=True)
-    dataset_path = create_c4_dataset_xxsmall(data_dir)
-    return dataset_path
 
 
 @pytest.mark.gpu
 @pytest.mark.world_size(4)
-def test_tp_train():
+@pytest.mark.parametrize('tp_degree', [2])
+@pytest.mark.parametrize('tp_strategy', ['ffn'])
+def test_tp_train(tp_degree: int, tp_strategy: str):
     """Test that we can train with FSDP-TP."""
-    tp_degree = 2
-    tp_strategy = 'ffn'
+    my_dir = Path('/my-data-dir')
 
-    # # create c4 dataset
-    # my_dir = Path('/my-data-dir-2')
-    # if my_dir.is_dir():
-    #     shutil.rmtree(my_dir)
-    # my_dir.mkdir(parents=True)
-    # dataset_name_2 = create_c4_dataset_xxsmall(my_dir)
-    fsdp_dataset_name = '/my-data-dir/my-copy-c4'
-    tp_dataset_name = '/my-data-dir-2/my-copy-c4'
+    try:
+        # create c4 dataset
+        if my_dir.is_dir() and my_dir.exists():
+            shutil.rmtree(my_dir)
+        my_dir.mkdir(parents=True)
+        tp_dataset_name = create_c4_dataset_xxsmall(my_dir)
 
-    # Get fsdp loss
-    # fsdp_dataset_name = create_c4_dataset(pathlib.Path('/my-fsdp-data-dir/'))
-    fsdp_cfg = get_cfg(fsdp_dataset_name)
-    fsdp_trainer = train(fsdp_cfg)
-    fsdp_trainer.close()
-    fsdp_losses = get_loss_array(fsdp_trainer)
-    ic(fsdp_losses)
+        # Train model with TP and get loss
+        tp_cfg = get_cfg(pathlib.Path(tp_dataset_name), tp_strategy, tp_degree)
+        tp_trainer = train(tp_cfg)
+        tp_trainer.close()
+        tp_loss = get_loss_array(tp_trainer)
 
-    # Get tp loss
-    # tp_dataset_name = create_c4_dataset(pathlib.Path('/my-tp-data-dir/'))
-    tp_cfg = get_cfg(tp_dataset_name, tp_strategy, tp_degree)
-    tp_trainer = train(tp_cfg)
-    tp_trainer.close()
-    tp_losses = get_loss_array(tp_trainer)
-    ic(tp_losses)
+        # Compare loss and expected loss for TP
+        import numpy as np
+        expected_tp_loss = np.array([
+            12.02126884,
+            11.96996498,
+            12.02957344,
+            11.97966957,
+            11.99677086,
+            11.96347618,
+        ])
+        np.testing.assert_allclose(tp_loss, expected_tp_loss)
+    except Exception as e:
+        raise e
+    finally:
+        # always remove the directory
+        if os.path.isdir(my_dir):
+            shutil.rmtree(my_dir)
 
 
 @pytest.mark.gpu
@@ -227,26 +210,25 @@ def test_tp_train_with_one_gpu():
 
 
 @pytest.mark.gpu  # use gpu because `megablocks` only installed with `gpu` dependencies
-def test_tp_train_with_moes():
+@pytest.mark.parametrize('tp_degree', [2])
+@pytest.mark.parametrize('tp_strategy', ['ffn'])
+def test_tp_train_with_moes(tp_degree: int, tp_strategy: str):
     """Test that tensor parallelism is not compatible with MoEs."""
     # Make `cfg` for MoE model, fsdp, and tp
-    train_cfg_path: str = 'scripts/train/yamls/pretrain/testing-moe.yaml'
-    with open(train_cfg_path, 'r', encoding='utf-8') as f:
-        train_cfg = om.load(f)
-    model_cfg = train_cfg.model
-    fsdp_cfg = train_cfg.fsdp_config
-    tp_cfg = {'strategy': 'ffn'}
+    moe_yaml_path: str = 'scripts/train/yamls/pretrain/testing-moe.yaml'
+    dataset_name = Path('')  # dummy dataset path
+    train_cfg = get_cfg(dataset_name, tp_strategy, tp_degree, moe_yaml_path)
 
     # Expect an error
     with pytest.raises(
         ValueError,
         match='Tensor Parallelism is not currently supported for MoE models.',
     ):
-        process_init_device(model_cfg, fsdp_cfg, tp_cfg)
-
-
-# if __name__ == '__main__':
-#     test_tp_train()
+        process_init_device(
+            train_cfg.model,
+            train_cfg.fsdp_config,
+            train_cfg.tp_config,
+        )
 
 
 @pytest.mark.world_size(4)
