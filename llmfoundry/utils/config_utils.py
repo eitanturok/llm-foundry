@@ -286,6 +286,8 @@ def apply_transforms_to_config(
             f'Invalid transforms: {transforms}. Must be a list of strings or callables, or ``all``.',
         )
 
+    ic(transform_functions)
+    # ic(cfg)
     for transform in transform_functions:
         cfg = transform(cfg)
     return cfg
