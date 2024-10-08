@@ -222,6 +222,11 @@ def train(cfg: DictConfig) -> Trainer:
         transforms='all',
     )
 
+    if train_cfg.tp_config:
+        ic(train_cfg.model['n_heads'])
+        train_cfg.model['n_heads'] = train_cfg.model['n_heads'] // ic(train_cfg.tp_config['tensor_parallel_degree'])
+        ic(train_cfg.model['n_heads'])
+
     # Set logging level
     if train_cfg.python_log_level is not None:
         logging.basicConfig(
