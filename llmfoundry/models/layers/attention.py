@@ -479,7 +479,7 @@ class GroupedQueryAttention(nn.Module):
 
         self.kv_dim = kv_dim if kv_dim is not None else self.d_model
         self.head_dim = d_model // n_heads
-        ic(self.d_model, self.n_heads, self.kv_dim, self.head_dim)
+        ic(self.d_model, self.n_heads, self.kv_dim, self.head_dim, self.kv_n_heads)
 
         # Usually, fc_type dict should be passed in through MPTBlock's __init__ function.
         if fc_type is None:
@@ -734,6 +734,7 @@ class GroupedQueryAttention(nn.Module):
             key = self.k_ln(key).to(dtype).view(k_shape)
 
         ic(query.shape, key.shape, value.shape)
+        ic(x[0], query[0], key[0])
         return query, key, value
 
     def _apply_rotary_embeddings(
