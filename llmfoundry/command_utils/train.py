@@ -81,7 +81,6 @@ def validate_config(train_config: TrainConfig):
     if train_config.eval_loader is not None:
         loaders.append(train_config.eval_loader)
     for loader in loaders:
-        ic(loader)
         if loader['name'] == 'text':
             if train_config.model['name'] == 'hf_t5':
                 raise ValueError(
@@ -249,7 +248,6 @@ def train(cfg: DictConfig) -> Trainer:
     )
 
     # Check for incompatibilities between the model and data loaders
-    ic(train_cfg)
     validate_config(train_cfg)
 
     cuda_alloc_conf = []
