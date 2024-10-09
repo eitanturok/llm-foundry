@@ -233,6 +233,10 @@ class MPTBlock(nn.Module):
             attention_mask = self.slice_attention_mask(attention_mask, seq_len)
             m, indices, _, _ = unpad_input(m, attention_mask)
         n = self.ffn(m)
+        ic(self.ffn.up_proj.weight.shape, self.ffn.down_proj.weight.shape)
+        ic(self.ffn.up_proj.weight, self.ffn.down_proj.weight)
+        ic(m.shape, m[0])
+        ic(n.shape, n[0])
         if not self.use_pad_tok_in_ffn and attention_mask is not None:
             assert pad_input is not None
             n = pad_input(n, indices, batch_size, seq_len)
