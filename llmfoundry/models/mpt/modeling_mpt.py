@@ -1452,6 +1452,8 @@ class ComposerMPTCausalLM(HuggingFaceModel):
                     'Requirements for MegaBlocks not installed; see install instructions in `README.md`.',
                 )
             clear_load_balancing_loss()
+
+        ic(batch['input_ids'].shape, batch['input_ids'])
         return self.model(
             input_ids=batch.get('input_ids', None),
             attention_mask=batch.get('attention_mask', None),
@@ -1469,6 +1471,7 @@ class ComposerMPTCausalLM(HuggingFaceModel):
             self.loss_fn,
             batch.get('sample_weighing_factor', None),
         )
+        ic(outputs.logits.shape, outputs.logits[:, :, 3], loss)
 
         if self.config.ffn_config['ffn_type'] in ffns_with_megablocks:
             # MegaBlocks MoE load balancing loss

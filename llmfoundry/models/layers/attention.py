@@ -587,6 +587,8 @@ class GroupedQueryAttention(nn.Module):
         )
         self.out_proj._is_residual = True
 
+        # ic(self.Wq.weight.data.tolist()[0], self.Wk.weight.tolist()[0], self.Wv.weight.data[0, :4])
+
     def forward(
         self,
         x: torch.Tensor,
@@ -666,6 +668,7 @@ class GroupedQueryAttention(nn.Module):
             value (torch.Tensor): The value tensor.
         """
         ic(self.Wk.weight.shape, self.Wq.weight.shape, self.Wv.weight.shape, x.shape)
+        ic(self.Wq.weight, self.Wk.weight, self.Wv.weight)
         if self.reuse_kv_layer_idx is not None:
             if prev_layer_key_value is None:
                 raise ValueError(
@@ -734,7 +737,9 @@ class GroupedQueryAttention(nn.Module):
             key = self.k_ln(key).to(dtype).view(k_shape)
 
         ic(query.shape, key.shape, value.shape)
-        ic(x[0], query[0], key[0])
+        # across all samples in the batch look at the 0th token in the sequence and consider
+        # the first 2 elements of the hidden dimension
+        ic(x[:, 0, :2], query[:, 0, :2], key[:, 0, :2], value[:, 0, :2])
         return query, key, value
 
     def _apply_rotary_embeddings(
